@@ -1,0 +1,141 @@
+spring:
+  application:
+    name: exp-accounts
+    version: 1.0.0
+    description: Experience layer service for account management journeys
+    team:
+      name: Firefly Software Solutions Inc
+      email: dev@getfirefly.io
+
+  threads:
+    virtual:
+      enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+firefly:
+  orchestration:
+    persistence:
+      provider: redis
+      key-prefix: "exp-accounts:"
+      key-ttl: 72h
+      retention-period: 30d
+      cleanup-interval: 6h
+    recovery:
+      enabled: true
+      stale-threshold: 1h
+
+  cqrs:
+    enabled: true
+    command:
+      timeout: 30s
+      metrics-enabled: true
+      tracing-enabled: true
+    query:
+      timeout: 15s
+      caching-enabled: true
+      cache-ttl: 5m
+      metrics-enabled: true
+      tracing-enabled: true
+
+  stepevents:
+    enabled: true
+
+api-configuration:
+  domain-platform:
+    banking-accounts:
+      base-path: http://localhost:8090
+      timeout: 10s
+    common-notifications:
+      base-path: http://localhost:8082
+      timeout: 5s
+
+server:
+  address: ${SERVER_ADDRESS:localhost}
+  port: ${SERVER_PORT:8100}
+  shutdown: graceful
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tagsSorter: alpha
+    operationsSorter: method
+    docExpansion: none
+    filter: true
+  packages-to-scan: com.firefly.experience.accounts.web.controllers
+  paths-to-match: /api/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.firefly.experience.accounts: DEBUG
+    org.fireflyframework: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: openapi
+  main:
+    web-application-type: reactive
+
+server:
+  port: 18080
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: WARN
+    org.springframework: WARN
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    com.firefly: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    com.firefly: INFO
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
