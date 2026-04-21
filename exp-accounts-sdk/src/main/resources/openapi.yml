@@ -1,0 +1,350 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:18080
+  description: Generated server url
+tags:
+- name: Account Opening Journey
+  description: Endpoints for the account opening journey workflow
+- name: Accounts
+  description: Account experience operations
+paths:
+  /api/v1/journeys/account-opening/{journeyId}/income-proof:
+    post:
+      tags:
+      - Account Opening Journey
+      summary: Submit Income Proof
+      description: Submit income proof documents for the account opening. Advances
+        the journey past the income proof gate.
+      operationId: submitIncomeProof
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitIncomeProofCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/journeys/account-opening/{journeyId}/funding:
+    post:
+      tags:
+      - Account Opening Journey
+      summary: Configure Funding Source
+      description: Configure the funding source for the initial deposit. Advances
+        the journey past the funding gate and triggers account creation.
+      operationId: configureFundingSource
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigureFundingSourceCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/journeys/account-opening:
+    post:
+      tags:
+      - Account Opening Journey
+      summary: Initiate Account Opening
+      description: "Start a new account opening journey - sends welcome notification,\
+        \ checks eligibility, and waits for income proof submission"
+      operationId: initiateAccountOpening
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitiateAccountOpeningCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOpeningJourneyStatusDTO"
+  /api/v1/journeys/account-opening/{journeyId}:
+    get:
+      tags:
+      - Account Opening Journey
+      summary: Get Journey Status
+      description: "Retrieve the current state of an account opening journey. Returns\
+        \ completed steps, current phase, and next expected action."
+      operationId: getJourneyStatus
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOpeningJourneyStatusDTO"
+  /api/v1/accounts/{accountId}:
+    get:
+      tags:
+      - Accounts
+      summary: Get account summary
+      description: Retrieves the account summary including balances and status
+      operationId: getAccountSummary
+      parameters:
+      - name: accountId
+        in: path
+        description: Account identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Account found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountSummaryResponse"
+        "404":
+          description: Account not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountSummaryResponse"
+    delete:
+      tags:
+      - Accounts
+      summary: Close an account
+      description: Closes an account with the specified reason
+      operationId: closeAccount
+      parameters:
+      - name: accountId
+        in: path
+        description: Account identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reason
+        in: query
+        description: Reason for closure
+        required: false
+        schema:
+          type: string
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Account closed successfully
+        "404":
+          description: Account not found
+  /api/v1/accounts/party/{partyId}:
+    get:
+      tags:
+      - Accounts
+      summary: Get party accounts
+      description: Retrieves all accounts for a specific party (customer)
+      operationId: getPartyAccounts
+      parameters:
+      - name: partyId
+        in: path
+        description: Party identifier
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Accounts retrieved
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountSummaryResponse"
+components:
+  schemas:
+    SubmitIncomeProofCommand:
+      type: object
+      properties:
+        documentType:
+          type: string
+        documentContent:
+          type: string
+        mimeType:
+          type: string
+        declaredAnnualIncome:
+          type: number
+        employerName:
+          type: string
+        occupation:
+          type: string
+    ConfigureFundingSourceCommand:
+      type: object
+      properties:
+        fundingMethod:
+          type: string
+        externalAccountNumber:
+          type: string
+        externalBankCode:
+          type: string
+        initialDepositAmount:
+          type: number
+    InitiateAccountOpeningCommand:
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        productCatalogId:
+          type: string
+          format: uuid
+        accountType:
+          type: string
+        currency:
+          type: string
+        branchId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        phone:
+          type: string
+    AccountOpeningJourneyStatusDTO:
+      type: object
+      properties:
+        journeyId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        contractId:
+          type: string
+          format: uuid
+        currentPhase:
+          type: string
+        completedSteps:
+          type: array
+          items:
+            type: string
+        nextStep:
+          type: string
+        accountStatus:
+          type: string
+        documentVerificationStatus:
+          type: string
+    AccountSummaryResponse:
+      type: object
+      properties:
+        accountId:
+          type: string
+          description: Account unique identifier
+          format: uuid
+        accountNumber:
+          type: string
+          description: Account number
+        accountType:
+          type: string
+          description: Account type
+        status:
+          type: string
+          description: Account status
+        availableBalance:
+          type: number
+          description: Available balance
+        currentBalance:
+          type: number
+          description: Current balance
+        currency:
+          type: string
+          description: Currency code
+        holderName:
+          type: string
+          description: Account holder name
+      description: Account summary for experience layer
