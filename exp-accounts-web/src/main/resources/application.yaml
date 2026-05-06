@@ -47,10 +47,10 @@ firefly:
 api-configuration:
   domain-platform:
     banking-accounts:
-      base-path: http://localhost:8090
+      base-path: ${ENDPOINT_DOMAIN_BANKING_ACCOUNTS:http://localhost:8090}
       timeout: 10s
     common-notifications:
-      base-path: http://localhost:8082
+      base-path: ${ENDPOINT_DOMAIN_COMMON_NOTIFICATIONS:http://localhost:8082}
       timeout: 5s
 
 server:
