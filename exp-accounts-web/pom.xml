@@ -12,6 +12,7 @@
     </parent>
 
     <artifactId>exp-accounts-web</artifactId>
+    <name>exp-accounts-web</name>
 
     <properties>
         <openapi.gen.skip>false</openapi.gen.skip>

@@ -12,6 +12,7 @@
     </parent>
 
     <artifactId>exp-accounts-infra</artifactId>
+    <name>exp-accounts-infra</name>
 
     <dependencies>
         <dependency>

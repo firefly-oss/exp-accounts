@@ -12,6 +12,7 @@
     </parent>
 
     <artifactId>exp-accounts-interfaces</artifactId>
+    <name>exp-accounts-interfaces</name>
 
     <dependencies>
         <dependency>

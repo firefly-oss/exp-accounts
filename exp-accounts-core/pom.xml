@@ -12,6 +12,7 @@
     </parent>
 
     <artifactId>exp-accounts-core</artifactId>
+    <name>exp-accounts-core</name>
 
     <dependencies>
         <!-- Internal modules -->
