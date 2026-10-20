@@ -6,25 +6,25 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.firefly</groupId>
+        <groupId>io.fireflysoftware</groupId>
         <artifactId>exp-accounts</artifactId>
-        <version>26.10.2</version>
+        <version>26.10.3</version>
     </parent>
 
     <artifactId>exp-accounts-web</artifactId>
 
     <properties>
         <openapi.gen.skip>false</openapi.gen.skip>
-        <openapi.gen.mainClass>com.firefly.experience.accounts.web.openapi.OpenApiGenApplication</openapi.gen.mainClass>
+        <openapi.gen.mainClass>io.fireflysoftware.experience.accounts.web.openapi.OpenApiGenApplication</openapi.gen.mainClass>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>com.firefly</groupId>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>exp-accounts-interfaces</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.firefly</groupId>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>exp-accounts-core</artifactId>
         </dependency>
         <dependency>
