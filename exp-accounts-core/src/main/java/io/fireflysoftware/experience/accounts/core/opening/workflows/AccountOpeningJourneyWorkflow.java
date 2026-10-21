@@ -18,11 +18,11 @@
 package io.fireflysoftware.experience.accounts.core.opening.workflows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountsApi;
-import io.fireflysoftware.domain.banking.accounts.sdk.model.OpenAccountCommand;
-import io.fireflysoftware.domain.common.notifications.sdk.api.NotificationsApi;
-import io.fireflysoftware.domain.common.notifications.sdk.model.SendNotificationCommand;
 import io.fireflysoftware.experience.accounts.core.opening.commands.ConfigureFundingSourceCommand;
+import io.fireflysoftware.experience.accounts.core.ports.CloseAccount;
+import io.fireflysoftware.experience.accounts.core.ports.NotifyCustomer;
+import io.fireflysoftware.experience.accounts.core.ports.OpenAccount;
+import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
 import io.fireflysoftware.experience.accounts.core.opening.commands.InitiateAccountOpeningCommand;
 import io.fireflysoftware.experience.accounts.core.opening.commands.SubmitIncomeProofCommand;
 import io.fireflysoftware.experience.accounts.core.opening.queries.AccountOpeningJourneyStatusDTO;
@@ -101,12 +101,12 @@ public class AccountOpeningJourneyWorkflow {
     public static final String PHASE_OPENING_ACCOUNT = "OPENING_ACCOUNT";
     public static final String PHASE_COMPLETED = "COMPLETED";
 
-    private static final String NOTIFICATION_CHANNEL = "AUTO";
     private static final String TEMPLATE_WELCOME = "ACCOUNT_OPENING_WELCOME";
     private static final String TEMPLATE_COMPLETED = "ACCOUNT_OPENING_COMPLETED";
 
-    private final AccountsApi accountsApi;
-    private final NotificationsApi notificationsApi;
+    private final OpenAccount openAccount;
+    private final CloseAccount closeAccount;
+    private final NotifyCustomer notifyCustomer;
     private final ObjectMapper objectMapper;
 
     @WorkflowStep(id = STEP_CREATE_APPLICATION)
@@ -119,20 +119,9 @@ public class AccountOpeningJourneyWorkflow {
     @WorkflowStep(id = STEP_SEND_WELCOME, dependsOn = STEP_CREATE_APPLICATION)
     public Mono<Void> sendWelcomeNotification(@Variable(VAR_CUSTOMER_ID) UUID customerId,
                                                @Input InitiateAccountOpeningCommand cmd) {
-        SendNotificationCommand notifCmd = new SendNotificationCommand()
-                .partyId(customerId)
-                .channel(NOTIFICATION_CHANNEL)
-                .templateCode(TEMPLATE_WELCOME)
-                .subject("Account Application Received")
-                .recipientEmail(cmd.getEmail());
-
-        if (cmd.getPhone() != null) {
-            notifCmd.recipientPhone(cmd.getPhone());
-        }
-
-        return notificationsApi.sendNotification(notifCmd, UUID.randomUUID().toString())
-                .doOnNext(r -> log.info("Sent welcome notification for customer: {}", customerId))
-                .then();
+        return notifyCustomer.send(customerId, TEMPLATE_WELCOME, "Account Application Received",
+                        cmd.getEmail(), cmd.getPhone())
+                .doOnSuccess(v -> log.info("Sent welcome notification for customer: {}", customerId));
     }
 
     @WorkflowStep(id = STEP_ELIGIBILITY_CHECK, dependsOn = STEP_CREATE_APPLICATION)
@@ -176,15 +165,16 @@ public class AccountOpeningJourneyWorkflow {
     public Mono<UUID> openAccount(@Variable(VAR_CUSTOMER_ID) UUID customerId,
                                    @Input InitiateAccountOpeningCommand cmd,
                                    ExecutionContext ctx) {
-        OpenAccountCommand openCmd = new OpenAccountCommand();
-        openCmd.setPartyId(customerId);
-        openCmd.setProductId(cmd.getProductId());
-        openCmd.setProductCatalogId(cmd.getProductCatalogId());
-        openCmd.setAccountType(cmd.getAccountType());
-        openCmd.setCurrency(cmd.getCurrency());
-        openCmd.setBranchId(cmd.getBranchId());
+        OpenAccountRequest request = OpenAccountRequest.builder()
+                .partyId(customerId)
+                .productId(cmd.getProductId())
+                .productCatalogId(cmd.getProductCatalogId())
+                .accountType(cmd.getAccountType())
+                .currency(cmd.getCurrency())
+                .branchId(cmd.getBranchId())
+                .build();
 
-        return accountsApi.openAccount(openCmd, UUID.randomUUID().toString())
+        return openAccount.open(request)
                 .map(response -> {
                     UUID accountId = response.getAccountId();
                     ctx.putVariable(VAR_CONTRACT_ID, response.getContractId());
@@ -196,20 +186,13 @@ public class AccountOpeningJourneyWorkflow {
     @WorkflowStep(id = STEP_SEND_WELCOME_KIT, dependsOn = STEP_OPEN_ACCOUNT)
     public Mono<Void> sendWelcomeKit(@Variable(VAR_CUSTOMER_ID) UUID customerId,
                                       @Variable(VAR_ACCOUNT_ID) UUID accountId) {
-        SendNotificationCommand notifCmd = new SendNotificationCommand()
-                .partyId(customerId)
-                .channel(NOTIFICATION_CHANNEL)
-                .templateCode(TEMPLATE_COMPLETED)
-                .subject("Your Account is Ready!");
-
-        return notificationsApi.sendNotification(notifCmd, UUID.randomUUID().toString())
-                .doOnNext(r -> log.info("Sent welcome kit for account: {}", accountId))
-                .then();
+        return notifyCustomer.send(customerId, TEMPLATE_COMPLETED, "Your Account is Ready!", null, null)
+                .doOnSuccess(v -> log.info("Sent welcome kit for account: {}", accountId));
     }
 
     public Mono<Void> compensateCloseAccount(@FromStep(STEP_OPEN_ACCOUNT) UUID accountId) {
         log.warn("Compensating: closing account accountId={}", accountId);
-        return accountsApi.closeAccount(accountId, "Workflow compensation", UUID.randomUUID().toString())
+        return closeAccount.close(accountId, "Workflow compensation")
                 .then()
                 .onErrorResume(ex -> {
                     log.warn("Failed to compensate account closure accountId={}: {}", accountId, ex.getMessage());

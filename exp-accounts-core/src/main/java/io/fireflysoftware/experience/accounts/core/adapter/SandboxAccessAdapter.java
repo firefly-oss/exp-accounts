@@ -30,7 +30,7 @@ import reactor.core.publisher.Mono;
  * {@link DomainAccessAdapter} and calls domain-core-security-center.
  */
 @Component
-@ConditionalOnProperty(name = "firefly.experience.access.adapter", havingValue = "sandbox", matchIfMissing = true)
+@ConditionalOnProperty(name = "firefly.experience.access.adapter", havingValue = "sandbox")
 public class SandboxAccessAdapter implements AccessPort {
 
     @Override

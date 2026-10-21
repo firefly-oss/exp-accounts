@@ -96,54 +96,6 @@ class AccountsControllerTest {
     }
 
     @Test
-    void getPartyAccounts_returnsAccountsForParty() {
-        UUID partyId = UUID.randomUUID();
-        UUID accountId1 = UUID.randomUUID();
-        UUID accountId2 = UUID.randomUUID();
-
-        AccountSummaryResponse account1 = AccountSummaryResponse.builder()
-                .accountId(accountId1)
-                .accountNumber("ES1111111111111111")
-                .accountType("CHECKING")
-                .status("ACTIVE")
-                .currency("EUR")
-                .build();
-
-        AccountSummaryResponse account2 = AccountSummaryResponse.builder()
-                .accountId(accountId2)
-                .accountNumber("ES2222222222222222")
-                .accountType("SAVINGS")
-                .status("ACTIVE")
-                .currency("EUR")
-                .build();
-
-        when(accountService.getCustomerAccounts(partyId))
-                .thenReturn(Flux.just(account1, account2));
-
-        StepVerifier.create(controller.getPartyAccounts(partyId))
-                .assertNext(summary -> {
-                    assertThat(summary.getAccountId()).isEqualTo(accountId1);
-                    assertThat(summary.getAccountType()).isEqualTo("CHECKING");
-                })
-                .assertNext(summary -> {
-                    assertThat(summary.getAccountId()).isEqualTo(accountId2);
-                    assertThat(summary.getAccountType()).isEqualTo("SAVINGS");
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    void getPartyAccounts_returnsEmptyFluxWhenNoAccounts() {
-        UUID partyId = UUID.randomUUID();
-
-        when(accountService.getCustomerAccounts(partyId))
-                .thenReturn(Flux.empty());
-
-        StepVerifier.create(controller.getPartyAccounts(partyId))
-                .verifyComplete();
-    }
-
-    @Test
     void closeAccount_returnsNoContent() {
         UUID accountId = UUID.randomUUID();
         String reason = "Account consolidation";

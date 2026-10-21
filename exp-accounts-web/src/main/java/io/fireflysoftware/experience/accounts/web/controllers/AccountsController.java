@@ -19,6 +19,9 @@ package io.fireflysoftware.experience.accounts.web.controllers;
 
 import io.fireflysoftware.experience.accounts.core.services.AccountExperienceService;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.AccountSummaryResponse;
+import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
+import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountResponse;
+import io.fireflysoftware.experience.accounts.interfaces.dtos.UpdateAccountRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -33,9 +36,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -47,6 +50,23 @@ import java.util.UUID;
 public class AccountsController {
 
     private final AccountExperienceService accountService;
+
+    @PostMapping
+    @Operation(summary = "Open an account", description = "Checks access, then opens the account through the domain port")
+    public Mono<ResponseEntity<OpenAccountResponse>> openAccount(@Valid @RequestBody OpenAccountRequest request) {
+        return accountService.openAccount(request)
+                .map(body -> ResponseEntity.status(HttpStatus.CREATED).body(body));
+    }
+
+    @PutMapping("/{accountId}")
+    @Operation(summary = "Update an account", description = "Checks access, then updates the account through the domain port")
+    public Mono<ResponseEntity<AccountSummaryResponse>> updateAccount(
+            @PathVariable UUID accountId,
+            @Valid @RequestBody UpdateAccountRequest request) {
+        return accountService.updateAccount(accountId, request)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
 
     @GetMapping("/{accountId}")
     @Operation(
@@ -61,18 +81,6 @@ public class AccountsController {
         return accountService.getAccountSummary(accountId)
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/party/{partyId}")
-    @Operation(
-            summary = "Get party accounts",
-            description = "Retrieves all accounts for a specific party (customer)"
-    )
-    @ApiResponse(responseCode = "200", description = "Accounts retrieved")
-    public Flux<AccountSummaryResponse> getPartyAccounts(
-            @Parameter(description = "Party identifier")
-            @PathVariable UUID partyId) {
-        return accountService.getCustomerAccounts(partyId);
     }
 
     @DeleteMapping("/{accountId}")

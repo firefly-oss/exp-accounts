@@ -20,7 +20,7 @@ package io.fireflysoftware.experience.accounts.core.services;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.AccountSummaryResponse;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountResponse;
-import reactor.core.publisher.Flux;
+import io.fireflysoftware.experience.accounts.interfaces.dtos.UpdateAccountRequest;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -31,7 +31,7 @@ public interface AccountExperienceService {
 
     Mono<AccountSummaryResponse> getAccountSummary(UUID accountId);
 
-    Flux<AccountSummaryResponse> getCustomerAccounts(UUID customerId);
+    Mono<AccountSummaryResponse> updateAccount(UUID accountId, UpdateAccountRequest request);
 
     Mono<Void> closeAccount(UUID accountId, String reason);
 }

@@ -17,93 +17,65 @@
 
 package io.fireflysoftware.experience.accounts.core.services;
 
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountBackofficeApi;
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountsApi;
-import io.fireflysoftware.domain.banking.accounts.sdk.model.AccountDTO;
-import io.fireflysoftware.domain.banking.accounts.sdk.model.OpenAccountCommand;
+import io.fireflysoftware.experience.accounts.core.ports.AccessAction;
+import io.fireflysoftware.experience.accounts.core.ports.AccessGuard;
+import io.fireflysoftware.experience.accounts.core.ports.IdentityPort;
+import io.fireflysoftware.experience.accounts.core.ports.AccessPort;
+import io.fireflysoftware.experience.accounts.core.ports.AccessRequest;
+import io.fireflysoftware.experience.accounts.core.ports.CloseAccount;
+import io.fireflysoftware.experience.accounts.core.ports.OpenAccount;
+import io.fireflysoftware.experience.accounts.core.ports.ReadAccount;
+import io.fireflysoftware.experience.accounts.core.ports.UpdateAccount;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.AccountSummaryResponse;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountResponse;
+import io.fireflysoftware.experience.accounts.interfaces.dtos.UpdateAccountRequest;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
-@Slf4j
+/**
+ * Account journey. Order: access check, then the domain port. The domain adapter calls
+ * domain-banking-accounts. A denial does not call the domain.
+ */
 @Service
 @RequiredArgsConstructor
 public class AccountExperienceServiceImpl implements AccountExperienceService {
 
-    private final AccountsApi accountsApi;
-    private final AccountBackofficeApi accountBackofficeApi;
+    private final IdentityPort identityPort;
+    private final AccessPort accessPort;
+    private final OpenAccount openAccount;
+    private final ReadAccount readAccount;
+    private final UpdateAccount updateAccount;
+    private final CloseAccount closeAccount;
 
     @Override
     public Mono<OpenAccountResponse> openAccount(OpenAccountRequest request) {
-        log.info("Opening account for party: {}", request.getPartyId());
-
-        OpenAccountCommand command = new OpenAccountCommand();
-        command.setPartyId(request.getPartyId());
-        command.setProductId(request.getProductId());
-        command.setProductCatalogId(request.getProductCatalogId());
-        command.setRoleInContractId(request.getRoleInContractId());
-        command.setAccountType(request.getAccountType());
-        command.setCurrency(request.getCurrency());
-        command.setBranchId(request.getBranchId());
-
-        String idempotencyKey = UUID.randomUUID().toString();
-
-        return accountsApi.openAccount(command, idempotencyKey)
-                .map(result -> OpenAccountResponse.builder()
-                        .accountId(result.getAccountId())
-                        .contractId(result.getContractId())
-                        .executionId(result.getExecutionId())
-                        .status(result.getStatus())
-                        .build());
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(request.getPartyId(), AccessAction.CREATE, "ACCOUNT", null),
+                () -> openAccount.open(request));
     }
 
     @Override
     public Mono<AccountSummaryResponse> getAccountSummary(UUID accountId) {
-        log.debug("Fetching account summary for: {}", accountId);
-
-        String idempotencyKey = UUID.randomUUID().toString();
-
-        return accountBackofficeApi.getAccount(accountId, idempotencyKey)
-                .map(this::mapAccountDTOToSummary);
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(accountId, AccessAction.READ, "ACCOUNT", accountId),
+                () -> readAccount.get(accountId));
     }
 
     @Override
-    public Flux<AccountSummaryResponse> getCustomerAccounts(UUID customerId) {
-        log.debug("Fetching accounts for customer: {}", customerId);
-
-        // TODO: Domain Banking Accounts SDK does not currently expose a listAccountsByParty endpoint.
-        // Once the domain API provides this capability, implement the call here.
-        // For now, throw UnsupportedOperationException to make the missing functionality explicit.
-        return Flux.error(new UnsupportedOperationException(
-                "Listing accounts by party is not yet supported. " +
-                "The domain-banking-accounts service does not expose a listAccountsByParty endpoint."));
+    public Mono<AccountSummaryResponse> updateAccount(UUID accountId, UpdateAccountRequest request) {
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(accountId, AccessAction.UPDATE, "ACCOUNT", accountId),
+                () -> updateAccount.update(accountId, request));
     }
 
     @Override
     public Mono<Void> closeAccount(UUID accountId, String reason) {
-        log.info("Closing account: {} with reason: {}", accountId, reason);
-
-        String idempotencyKey = UUID.randomUUID().toString();
-
-        return accountsApi.closeAccount(accountId, reason, idempotencyKey);
-    }
-
-    private AccountSummaryResponse mapAccountDTOToSummary(AccountDTO account) {
-        String status = account.getAccountStatus() != null ? account.getAccountStatus().getValue() : null;
-        String accountType = account.getAccountType() != null ? account.getAccountType().getValue() : null;
-        return AccountSummaryResponse.builder()
-                .accountId(account.getAccountId())
-                .accountNumber(account.getAccountNumber())
-                .accountType(accountType)
-                .status(status)
-                .currency(account.getCurrency())
-                .build();
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(accountId, AccessAction.CLOSE, "ACCOUNT", accountId),
+                () -> closeAccount.close(accountId, reason));
     }
 }
