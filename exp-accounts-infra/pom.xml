@@ -21,6 +21,11 @@
         </dependency>
         <dependency>
             <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-payments-sdk</artifactId>
+            <version>26.10.3</version>
+        </dependency>
+        <dependency>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>domain-common-notifications-sdk</artifactId>
         </dependency>
         <dependency>
