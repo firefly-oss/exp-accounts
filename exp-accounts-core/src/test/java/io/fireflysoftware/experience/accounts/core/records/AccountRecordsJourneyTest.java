@@ -16,9 +16,16 @@
 
 package io.fireflysoftware.experience.accounts.core.records;
 
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi.StatementView;
+import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsControllerApi;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.RecordedId;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.ServicingMandate;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.SpaceSweep;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.StatementClose;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.StatementView;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.WithdrawalLimit;
 import io.fireflysoftware.domain.payments.sdk.api.PaymentRecordsApi;
+import io.fireflysoftware.domain.payments.sdk.model.DirectDebitBody;
+import io.fireflysoftware.domain.payments.sdk.model.StandingOrderBody;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -31,9 +38,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -43,22 +47,18 @@ import static org.mockito.Mockito.when;
 class AccountRecordsJourneyTest {
 
     @Mock
-    private AccountRecordsApi accounts;
+    private AccountRecordsControllerApi accounts;
     @Mock
     private PaymentRecordsApi payments;
 
     @Test
     void recordsTheSixRowsThroughTheDomainSdks() {
-        when(accounts.closeStatement(any(), anyString(), any(), anyList(), anyString())).thenReturn(Mono.just(UUID.randomUUID()));
-        when(accounts.recordWithdrawalLimit(any(), anyString(), any(), any(), any(), any(), anyString()))
-                .thenReturn(Mono.just(UUID.randomUUID()));
-        when(accounts.recordSpaceSweep(any(), any(), any(), any(), anyString(), anyString()))
-                .thenReturn(Mono.just(UUID.randomUUID()));
-        when(accounts.createServicingMandate(any(), any(), anyString(), anyBoolean(), anyString()))
-                .thenReturn(Mono.just(UUID.randomUUID()));
-        when(payments.runStandingOrder(any(), any(), anyString(), any(), anyString())).thenReturn(Mono.just(UUID.randomUUID()));
-        when(payments.createDirectDebit(any(), any(), any(), anyString(), anyString(), anyString()))
-                .thenReturn(Mono.just(UUID.randomUUID()));
+        when(accounts.closeStatement(any(), any(), any())).thenReturn(Mono.just(new RecordedId().id(UUID.randomUUID())));
+        when(accounts.withdrawalLimit(any(), any(), any())).thenReturn(Mono.just(new RecordedId().id(UUID.randomUUID())));
+        when(accounts.spaceSweep(any(), any(), any())).thenReturn(Mono.just(new RecordedId().id(UUID.randomUUID())));
+        when(accounts.servicingMandate(any(), any(), any())).thenReturn(Mono.just(new RecordedId().id(UUID.randomUUID())));
+        when(payments.runStandingOrder(any(), any())).thenReturn(Mono.just(new io.fireflysoftware.domain.payments.sdk.model.RecordedId().id(UUID.randomUUID())));
+        when(payments.createDirectDebit(any(), any())).thenReturn(Mono.just(new io.fireflysoftware.domain.payments.sdk.model.RecordedId().id(UUID.randomUUID())));
 
         UUID accountId = UUID.randomUUID();
         UUID partyId = UUID.randomUUID();
@@ -70,29 +70,42 @@ class AccountRecordsJourneyTest {
                 .record(accountId, partyId, source, target, schedule, creditor)
                 .block();
 
-        verify(accounts).closeStatement(eq(accountId), eq("USD"), eq(new BigDecimal("100.00")), anyList(), eq("statement"));
-        verify(accounts).recordWithdrawalLimit(eq(accountId), eq("USD"), eq(new BigDecimal("50.00")),
-                eq(new BigDecimal("10.00")), eq(new BigDecimal("40.00")), eq(new BigDecimal("45.00")), eq("limit"));
-        verify(accounts).recordSpaceSweep(eq(accountId), eq(source), eq(target), eq(new BigDecimal("15.00")), eq("USD"), eq("sweep"));
-        verify(accounts).createServicingMandate(eq(accountId), eq(partyId), eq("OPERATOR"), eq(true), eq("mandate"));
-        verify(payments).runStandingOrder(eq(schedule), eq(new BigDecimal("25.00")), eq("GBP"),
-                eq(LocalDate.of(2026, 10, 21)), eq("standing-order"));
-        verify(payments).createDirectDebit(eq(accountId), eq(creditor), eq(new BigDecimal("100.00")),
-                eq("GBP"), eq("MANDATE-1"), eq("direct-debit"));
+        verify(accounts).closeStatement(eq(accountId), eq(new StatementClose()
+                .currency("USD")
+                .openingBalance(new BigDecimal("100.00"))
+                .lineAmounts(List.of(new BigDecimal("25.00"), new BigDecimal("-10.00")))), eq("statement"));
+        verify(accounts).withdrawalLimit(eq(accountId), eq(new WithdrawalLimit()
+                .currency("USD")
+                .withdrawalLimit(new BigDecimal("50.00"))
+                .overdraftLimit(new BigDecimal("10.00"))
+                .balance(new BigDecimal("40.00"))
+                .withdrawalAmount(new BigDecimal("45.00"))), eq("limit"));
+        verify(accounts).spaceSweep(eq(accountId), eq(new SpaceSweep()
+                .sourceSpaceId(source).targetSpaceId(target).amount(new BigDecimal("15.00")).currency("USD")), eq("sweep"));
+        verify(accounts).servicingMandate(eq(accountId), eq(new ServicingMandate()
+                .partyId(partyId).role("OPERATOR").active(true)), eq("mandate"));
+        verify(payments).runStandingOrder(eq(new StandingOrderBody()
+                .paymentScheduleId(schedule).amount(new BigDecimal("25.00")).currency("GBP")
+                .valueDate(LocalDate.of(2026, 10, 21))), eq("standing-order"));
+        verify(payments).createDirectDebit(eq(new DirectDebitBody()
+                .debtorAccountId(accountId).creditorPartyId(creditor).amountLimit(new BigDecimal("100.00"))
+                .currency("GBP").reference("MANDATE-1")), eq("direct-debit"));
     }
 
     @Test
     void readsTheStoredStatementThroughTheAccountsDomain() {
         UUID accountId = UUID.randomUUID();
         UUID statementId = UUID.randomUUID();
-        StatementView stored = new StatementView(statementId, "USD", new BigDecimal("100.00"),
-                List.of(new BigDecimal("25.00"), new BigDecimal("-10.00")),
-                new BigDecimal("25.00"), new BigDecimal("10.00"), new BigDecimal("115.00"));
-        when(accounts.statement(accountId, statementId)).thenReturn(Mono.just(stored));
+        StatementView stored = new StatementView().id(statementId).currency("USD")
+                .openingBalance(new BigDecimal("100.00"))
+                .lineAmounts(List.of(new BigDecimal("25.00"), new BigDecimal("-10.00")))
+                .credits(new BigDecimal("25.00")).debits(new BigDecimal("10.00"))
+                .closingBalance(new BigDecimal("115.00"));
+        when(accounts.statement(accountId, statementId, null)).thenReturn(Mono.just(stored));
 
         StatementView read = new AccountRecordsJourney(accounts, payments).readStatement(accountId, statementId).block();
 
-        assertThat(read.closingBalance()).isEqualByComparingTo("115.00");
-        verify(accounts).statement(accountId, statementId);
+        assertThat(read.getClosingBalance()).isEqualByComparingTo("115.00");
+        verify(accounts).statement(accountId, statementId, null);
     }
 }

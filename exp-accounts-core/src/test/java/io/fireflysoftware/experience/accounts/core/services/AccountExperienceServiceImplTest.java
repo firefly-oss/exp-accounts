@@ -17,7 +17,7 @@
 
 package io.fireflysoftware.experience.accounts.core.services;
 
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.StatementView;
 import io.fireflysoftware.experience.accounts.core.ports.AccessAction;
 import io.fireflysoftware.experience.accounts.core.ports.AccessDecision;
 import io.fireflysoftware.experience.accounts.core.ports.AccessDeniedException;
@@ -155,8 +155,9 @@ class AccountExperienceServiceImplTest {
     void readStatement_returnsTheStoredStatementAfterAccessCheck() {
         UUID accountId = UUID.randomUUID();
         UUID statementId = UUID.randomUUID();
-        AccountRecordsApi.StatementView stored = new AccountRecordsApi.StatementView(
-                statementId, "USD", new BigDecimal("100.00"), java.util.List.of(), null, null, new BigDecimal("100.00"));
+        StatementView stored = new StatementView().id(statementId).currency("USD")
+                .openingBalance(new BigDecimal("100.00")).lineAmounts(java.util.List.of())
+                .closingBalance(new BigDecimal("100.00"));
         when(accessPort.check(any(AccessRequest.class))).thenReturn(Mono.just(AccessDecision.grant()));
         when(records.readStatement(accountId, statementId)).thenReturn(Mono.just(stored));
 

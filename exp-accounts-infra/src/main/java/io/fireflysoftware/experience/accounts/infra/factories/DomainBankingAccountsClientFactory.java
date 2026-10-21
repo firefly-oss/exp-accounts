@@ -17,7 +17,7 @@
 
 package io.fireflysoftware.experience.accounts.infra.factories;
 
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
+import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsControllerApi;
 import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountsApi;
 import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountBackofficeApi;
 import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountSpacesApi;
@@ -52,7 +52,7 @@ public class DomainBankingAccountsClientFactory {
     }
 
     @Bean
-    public AccountRecordsApi accountRecordsApi() {
-        return new AccountRecordsApi(apiClient);
+    public AccountRecordsControllerApi accountRecordsApi() {
+        return new AccountRecordsControllerApi(apiClient);
     }
 }

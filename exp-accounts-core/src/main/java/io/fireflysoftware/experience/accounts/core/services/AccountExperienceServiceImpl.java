@@ -17,7 +17,7 @@
 
 package io.fireflysoftware.experience.accounts.core.services;
 
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.StatementView;
 import io.fireflysoftware.experience.accounts.core.ports.AccessAction;
 import io.fireflysoftware.experience.accounts.core.ports.AccessGuard;
 import io.fireflysoftware.experience.accounts.core.ports.IdentityPort;
@@ -90,7 +90,7 @@ public class AccountExperienceServiceImpl implements AccountExperienceService {
     }
 
     @Override
-    public Mono<AccountRecordsApi.StatementView> readStatement(UUID accountId, UUID statementId) {
+    public Mono<StatementView> readStatement(UUID accountId, UUID statementId) {
         return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
                 AccessRequest.of(accountId, AccessAction.READ, "ACCOUNT", accountId),
                 () -> records.readStatement(accountId, statementId));

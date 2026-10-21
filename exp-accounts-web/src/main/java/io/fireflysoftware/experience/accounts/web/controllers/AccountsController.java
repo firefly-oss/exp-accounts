@@ -17,7 +17,7 @@
 
 package io.fireflysoftware.experience.accounts.web.controllers;
 
-import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
+import io.fireflysoftware.domain.banking.accounts.sdk.model.StatementView;
 import io.fireflysoftware.experience.accounts.core.services.AccountExperienceService;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.AccountSummaryResponse;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
@@ -107,7 +107,7 @@ public class AccountsController {
 
     @GetMapping("/{accountId}/statements/{statementId}")
     @Operation(summary = "Read a statement", description = "Checks access, then reads the stored statement through the domain port")
-    public Mono<ResponseEntity<AccountRecordsApi.StatementView>> readStatement(@PathVariable UUID accountId,
+    public Mono<ResponseEntity<StatementView>> readStatement(@PathVariable UUID accountId,
                                                                                 @PathVariable UUID statementId) {
         return accountService.readStatement(accountId, statementId)
                 .map(ResponseEntity::ok);
