@@ -34,4 +34,6 @@ public interface AccountExperienceService {
     Mono<AccountSummaryResponse> updateAccount(UUID accountId, UpdateAccountRequest request);
 
     Mono<Void> closeAccount(UUID accountId, String reason);
+
+    Mono<UUID> closeStatement(UUID accountId);
 }

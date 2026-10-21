@@ -26,6 +26,7 @@ import io.fireflysoftware.experience.accounts.core.ports.CloseAccount;
 import io.fireflysoftware.experience.accounts.core.ports.OpenAccount;
 import io.fireflysoftware.experience.accounts.core.ports.ReadAccount;
 import io.fireflysoftware.experience.accounts.core.ports.UpdateAccount;
+import io.fireflysoftware.experience.accounts.core.records.AccountRecordsJourney;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.AccountSummaryResponse;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountResponse;
@@ -50,6 +51,7 @@ public class AccountExperienceServiceImpl implements AccountExperienceService {
     private final ReadAccount readAccount;
     private final UpdateAccount updateAccount;
     private final CloseAccount closeAccount;
+    private final AccountRecordsJourney records;
 
     @Override
     public Mono<OpenAccountResponse> openAccount(OpenAccountRequest request) {
@@ -77,5 +79,12 @@ public class AccountExperienceServiceImpl implements AccountExperienceService {
         return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
                 AccessRequest.of(accountId, AccessAction.CLOSE, "ACCOUNT", accountId),
                 () -> closeAccount.close(accountId, reason));
+    }
+
+    @Override
+    public Mono<UUID> closeStatement(UUID accountId) {
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(accountId, AccessAction.CREATE, "ACCOUNT", null),
+                () -> records.closeStatement(accountId));
     }
 }

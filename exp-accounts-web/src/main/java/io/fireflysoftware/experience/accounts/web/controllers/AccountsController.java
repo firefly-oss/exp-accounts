@@ -91,11 +91,16 @@ public class AccountsController {
     @ApiResponse(responseCode = "204", description = "Account closed successfully")
     @ApiResponse(responseCode = "404", description = "Account not found")
     public Mono<ResponseEntity<Void>> closeAccount(
-            @Parameter(description = "Account identifier")
             @PathVariable UUID accountId,
-            @Parameter(description = "Reason for closure")
             @RequestParam(required = false) String reason) {
         return accountService.closeAccount(accountId, reason)
                 .then(Mono.just(ResponseEntity.noContent().<Void>build()));
+    }
+
+    @PostMapping("/{accountId}/statements")
+    @Operation(summary = "Close a statement", description = "Checks access, then stores the statement through the domain port")
+    public Mono<ResponseEntity<java.util.Map<String, UUID>>> closeStatement(@PathVariable UUID accountId) {
+        return accountService.closeStatement(accountId)
+                .map(statementId -> ResponseEntity.status(HttpStatus.CREATED).body(java.util.Map.of("statementId", statementId)));
     }
 }

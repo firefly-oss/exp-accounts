@@ -28,6 +28,7 @@ import io.fireflysoftware.experience.accounts.core.ports.CloseAccount;
 import io.fireflysoftware.experience.accounts.core.ports.OpenAccount;
 import io.fireflysoftware.experience.accounts.core.ports.ReadAccount;
 import io.fireflysoftware.experience.accounts.core.ports.UpdateAccount;
+import io.fireflysoftware.experience.accounts.core.records.AccountRecordsJourney;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,13 +57,15 @@ class AccountExperienceServiceImplTest {
     @Mock private ReadAccount readAccount;
     @Mock private UpdateAccount updateAccount;
     @Mock private CloseAccount closeAccount;
+    @Mock private AccountRecordsJourney records;
 
     private AccountExperienceServiceImpl service;
 
     @BeforeEach
     void setUp() {
         lenient().when(identityPort.resolve(any())).thenReturn(Mono.just(new SubjectRef(IdentityPort.SAMPLE_ACTOR, "sandbox")));
-        service = new AccountExperienceServiceImpl(identityPort, accessPort, openAccount, readAccount, updateAccount, closeAccount);
+        service = new AccountExperienceServiceImpl(
+                identityPort, accessPort, openAccount, readAccount, updateAccount, closeAccount, records);
     }
 
     @Test
@@ -118,5 +121,30 @@ class AccountExperienceServiceImplTest {
 
         StepVerifier.create(service.closeAccount(accountId, "Customer request")).verifyComplete();
         verify(closeAccount).close(accountId, "Customer request");
+    }
+
+    @Test
+    void closeStatement_returnsStoredIdAfterAccessCheck() {
+        UUID accountId = UUID.randomUUID();
+        UUID statementId = UUID.randomUUID();
+        when(accessPort.check(any(AccessRequest.class))).thenReturn(Mono.just(AccessDecision.grant()));
+        when(records.closeStatement(accountId)).thenReturn(Mono.just(statementId));
+
+        StepVerifier.create(service.closeStatement(accountId))
+                .expectNext(statementId)
+                .verifyComplete();
+    }
+
+    @Test
+    void closeStatement_deniedAccessDoesNotCallDomain() {
+        UUID accountId = UUID.randomUUID();
+        when(accessPort.check(any(AccessRequest.class)))
+                .thenReturn(Mono.just(AccessDecision.denied("ACTOR_NOT_ENTITLED")));
+
+        StepVerifier.create(service.closeStatement(accountId))
+                .expectError(AccessDeniedException.class)
+                .verify();
+
+        verify(records, never()).closeStatement(any());
     }
 }

@@ -43,8 +43,7 @@ public class AccountRecordsJourney {
 
     public Mono<Void> record(UUID accountId, UUID partyId, UUID sourceSpaceId, UUID targetSpaceId,
                               UUID paymentScheduleId, UUID creditorPartyId) {
-        return accounts.closeStatement(accountId, "USD", new BigDecimal("100.00"),
-                        List.of(new BigDecimal("25.00"), new BigDecimal("-10.00")), "statement")
+        return closeStatement(accountId)
                 .then(accounts.recordWithdrawalLimit(accountId, "USD", new BigDecimal("50.00"),
                         new BigDecimal("10.00"), new BigDecimal("40.00"), new BigDecimal("45.00"), "limit"))
                 .then(accounts.recordSpaceSweep(accountId, sourceSpaceId, targetSpaceId,
@@ -55,5 +54,10 @@ public class AccountRecordsJourney {
                 .then(payments.createDirectDebit(accountId, creditorPartyId, new BigDecimal("100.00"),
                         "GBP", "MANDATE-1", "direct-debit"))
                 .then();
+    }
+
+    public Mono<UUID> closeStatement(UUID accountId) {
+        return accounts.closeStatement(accountId, "USD", new BigDecimal("100.00"),
+                List.of(new BigDecimal("25.00"), new BigDecimal("-10.00")), "statement");
     }
 }
