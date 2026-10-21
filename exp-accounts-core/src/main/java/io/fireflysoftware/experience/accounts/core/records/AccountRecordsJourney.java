@@ -17,6 +17,7 @@
 package io.fireflysoftware.experience.accounts.core.records;
 
 import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
+import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi.StatementView;
 import io.fireflysoftware.domain.payments.sdk.api.PaymentRecordsApi;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -59,5 +60,9 @@ public class AccountRecordsJourney {
     public Mono<UUID> closeStatement(UUID accountId) {
         return accounts.closeStatement(accountId, "USD", new BigDecimal("100.00"),
                 List.of(new BigDecimal("25.00"), new BigDecimal("-10.00")), "statement");
+    }
+
+    public Mono<StatementView> readStatement(UUID accountId, UUID statementId) {
+        return accounts.statement(accountId, statementId);
     }
 }

@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.accounts.core.services;
 
+import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
 import io.fireflysoftware.experience.accounts.core.ports.AccessAction;
 import io.fireflysoftware.experience.accounts.core.ports.AccessDecision;
 import io.fireflysoftware.experience.accounts.core.ports.AccessDeniedException;
@@ -38,6 +39,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
+import java.math.BigDecimal;
 
 import java.util.UUID;
 
@@ -146,5 +149,32 @@ class AccountExperienceServiceImplTest {
                 .verify();
 
         verify(records, never()).closeStatement(any());
+    }
+
+    @Test
+    void readStatement_returnsTheStoredStatementAfterAccessCheck() {
+        UUID accountId = UUID.randomUUID();
+        UUID statementId = UUID.randomUUID();
+        AccountRecordsApi.StatementView stored = new AccountRecordsApi.StatementView(
+                statementId, "USD", new BigDecimal("100.00"), java.util.List.of(), null, null, new BigDecimal("100.00"));
+        when(accessPort.check(any(AccessRequest.class))).thenReturn(Mono.just(AccessDecision.grant()));
+        when(records.readStatement(accountId, statementId)).thenReturn(Mono.just(stored));
+
+        StepVerifier.create(service.readStatement(accountId, statementId))
+                .expectNext(stored)
+                .verifyComplete();
+    }
+
+    @Test
+    void readStatement_deniedAccessDoesNotCallDomain() {
+        UUID accountId = UUID.randomUUID();
+        when(accessPort.check(any(AccessRequest.class)))
+                .thenReturn(Mono.just(AccessDecision.denied("ACTOR_NOT_ENTITLED")));
+
+        StepVerifier.create(service.readStatement(accountId, UUID.randomUUID()))
+                .expectError(AccessDeniedException.class)
+                .verify();
+
+        verify(records, never()).readStatement(any(), any());
     }
 }

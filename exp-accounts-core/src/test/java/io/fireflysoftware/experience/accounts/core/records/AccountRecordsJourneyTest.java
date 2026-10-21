@@ -17,6 +17,7 @@
 package io.fireflysoftware.experience.accounts.core.records;
 
 import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
+import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi.StatementView;
 import io.fireflysoftware.domain.payments.sdk.api.PaymentRecordsApi;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,7 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +35,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,5 +79,20 @@ class AccountRecordsJourneyTest {
                 eq(LocalDate.of(2026, 10, 21)), eq("standing-order"));
         verify(payments).createDirectDebit(eq(accountId), eq(creditor), eq(new BigDecimal("100.00")),
                 eq("GBP"), eq("MANDATE-1"), eq("direct-debit"));
+    }
+
+    @Test
+    void readsTheStoredStatementThroughTheAccountsDomain() {
+        UUID accountId = UUID.randomUUID();
+        UUID statementId = UUID.randomUUID();
+        StatementView stored = new StatementView(statementId, "USD", new BigDecimal("100.00"),
+                List.of(new BigDecimal("25.00"), new BigDecimal("-10.00")),
+                new BigDecimal("25.00"), new BigDecimal("10.00"), new BigDecimal("115.00"));
+        when(accounts.statement(accountId, statementId)).thenReturn(Mono.just(stored));
+
+        StatementView read = new AccountRecordsJourney(accounts, payments).readStatement(accountId, statementId).block();
+
+        assertThat(read.closingBalance()).isEqualByComparingTo("115.00");
+        verify(accounts).statement(accountId, statementId);
     }
 }

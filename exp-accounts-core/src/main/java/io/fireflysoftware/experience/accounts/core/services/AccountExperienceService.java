@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.accounts.core.services;
 
+import io.fireflysoftware.domain.banking.accounts.sdk.api.AccountRecordsApi;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.AccountSummaryResponse;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountResponse;
@@ -36,4 +37,6 @@ public interface AccountExperienceService {
     Mono<Void> closeAccount(UUID accountId, String reason);
 
     Mono<UUID> closeStatement(UUID accountId);
+
+    Mono<AccountRecordsApi.StatementView> readStatement(UUID accountId, UUID statementId);
 }
