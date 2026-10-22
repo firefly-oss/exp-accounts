@@ -8,13 +8,13 @@
     <parent>
         <groupId>io.fireflysoftware</groupId>
         <artifactId>firefly-parent</artifactId>
-        <version>26.10.5</version>
+        <version>26.10.6</version>
         <relativePath/>
     </parent>
 
     <artifactId>exp-accounts</artifactId>
     <name>exp-accounts</name>
-    <version>26.10.5</version>
+    <version>26.10.6</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -37,7 +37,7 @@
             <dependency>
                 <groupId>io.fireflysoftware</groupId>
                 <artifactId>firefly-bom</artifactId>
-                <version>26.10.5</version>
+                <version>26.10.6</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
