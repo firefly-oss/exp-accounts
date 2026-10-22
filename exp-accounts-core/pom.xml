@@ -24,6 +24,10 @@
             <groupId>io.fireflysoftware</groupId>
             <artifactId>exp-accounts-infra</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-core-security-center-sdk</artifactId>
+        </dependency>
 
         <!-- Framework (includes webflux, utils, web, etc.) -->
         <dependency>
