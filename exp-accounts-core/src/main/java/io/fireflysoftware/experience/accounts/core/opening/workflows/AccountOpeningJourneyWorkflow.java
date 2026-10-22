@@ -19,9 +19,11 @@ package io.fireflysoftware.experience.accounts.core.opening.workflows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fireflysoftware.experience.accounts.core.opening.commands.ConfigureFundingSourceCommand;
+import io.fireflysoftware.experience.accounts.core.ports.CheckEligibility;
 import io.fireflysoftware.experience.accounts.core.ports.CloseAccount;
 import io.fireflysoftware.experience.accounts.core.ports.NotifyCustomer;
 import io.fireflysoftware.experience.accounts.core.ports.OpenAccount;
+import io.fireflysoftware.experience.accounts.core.ports.VerifyDocuments;
 import io.fireflysoftware.experience.accounts.interfaces.dtos.OpenAccountRequest;
 import io.fireflysoftware.experience.accounts.core.opening.commands.InitiateAccountOpeningCommand;
 import io.fireflysoftware.experience.accounts.core.opening.commands.SubmitIncomeProofCommand;
@@ -107,6 +109,8 @@ public class AccountOpeningJourneyWorkflow {
     private final OpenAccount openAccount;
     private final CloseAccount closeAccount;
     private final NotifyCustomer notifyCustomer;
+    private final CheckEligibility checkEligibility;
+    private final VerifyDocuments verifyDocuments;
     private final ObjectMapper objectMapper;
 
     @WorkflowStep(id = STEP_CREATE_APPLICATION)
@@ -128,7 +132,7 @@ public class AccountOpeningJourneyWorkflow {
     public Mono<Boolean> checkEligibility(@Variable(VAR_CUSTOMER_ID) UUID customerId,
                                            @Input InitiateAccountOpeningCommand cmd) {
         log.info("Checking account eligibility for customer: {}", customerId);
-        return Mono.just(true);
+        return checkEligibility.check(customerId, cmd.getProductId());
     }
 
     @WorkflowStep(id = STEP_RECEIVE_INCOME_PROOF, dependsOn = {STEP_SEND_WELCOME, STEP_ELIGIBILITY_CHECK})
@@ -146,7 +150,7 @@ public class AccountOpeningJourneyWorkflow {
     @SetVariable(VAR_DOC_VERIFICATION_STATUS)
     public Mono<String> verifyDocuments(@Variable(VAR_CUSTOMER_ID) UUID customerId) {
         log.info("Verifying documents for customer: {}", customerId);
-        return Mono.just("VERIFIED");
+        return verifyDocuments.verify(customerId);
     }
 
     @WorkflowStep(id = STEP_RECEIVE_FUNDING, dependsOn = STEP_VERIFY_DOCUMENTS)
